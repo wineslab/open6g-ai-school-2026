@@ -1,0 +1,969 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+ "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <meta name="date" content="2026-03-30" />
+  <title>OpenAirInterface 5G RAN @ Open6G+AI school</title>
+  <style type="text/css">
+      code{white-space: pre-wrap; background: #E4E5E7; }
+      span.smallcaps{font-variant: small-caps;}
+      span.underline{text-decoration: underline;}
+      div.column{display: inline-block; vertical-align: top; width: 50%;}
+  </style>
+  <link rel="stylesheet" type="text/css" media="screen, projection, print"
+    href="https://www.w3.org/Talks/Tools/Slidy2/styles/slidy.css" />
+  <script src="https://www.w3.org/Talks/Tools/Slidy2/scripts/slidy.js"
+    charset="utf-8" type="text/javascript"></script>
+</head>
+<body>
+<div class="slide titlepage">
+  <h1 class="title">OpenAirInterface 5G RAN @ Open6G+AI school</h1>
+  <p class="date">March 30, 2026</p>
+</div>
+<div id="openairinterface-5g-ran-open6gai-school"
+class="slide section level1">
+<h1>OpenAirInterface 5G RAN @ Open6G+AI School</h1>
+<blockquote>
+<p>Author: Robert Schmidt (March 30, 2026)</p>
+</blockquote>
+<p>Note: this repository is hosted at <a
+href="https://gitlab.eurecom.fr/oai/trainings/oai-workshops">this Gitlab
+repository</a>.</p>
+<p><strong>What do we cover in the RAN Hands-On?</strong></p>
+<p>The aim of this tutorial is to:</p>
+<ol style="list-style-type: decimal">
+<li>Understand the code repository organization</li>
+<li>Set up an end-to-end 5G/NR SA setup with RFsimulator from
+source</li>
+<li>Start with the DU-CU/F1 split</li>
+<li>Start with the DU-CU/F1+E1 split</li>
+<li>Start with the nFAPI+F1+E1 split</li>
+<li>Test F1 Handover</li>
+<li>Connect multiple UEs</li>
+<li>Use the scope(s) + basic channel modeling</li>
+<li>NTN</li>
+</ol>
+<blockquote>
+<p>Note: this file can be converted to a presentation using</p>
+</blockquote>
+<pre><code>pandoc -t slidy --template ran.slidy -s README.md -o README.html   --metadata title=&quot;OpenAirInterface 5G RAN Workshop 2025&quot; --metadata date=&quot;November 18, 2025&quot;</code></pre>
+</div>
+<div class="slide section level1">
+
+<p><strong>TABLE OF CONTENTS</strong></p>
+<p>[[<em>TOC</em>]]</p>
+</div>
+<div class="slide section level1">
+
+<p><strong>Hardware Requirements</strong></p>
+<ol style="list-style-type: decimal">
+<li>Your laptop/remote server must have at least an 8-core CPU (or
+equivalent), and a minimum of 16 GB of RAM.</li>
+<li>Make sure your laptop/remote server CPU supports <code>avx2</code>.
+<ul>
+<li>How to check for AVX2 support: Check <code>/proc/cpuinfo</code> for
+the AVX2 flag (<code>lscpu | grep avx2</code>)</li>
+</ul></li>
+<li>Disk space:
+<ul>
+<li>If Ubuntu 24.04 is already installed, ensure at least 20 GB of free
+space.</li>
+<li>If not, prepare a free partition with at least 100 GB to install
+Ubuntu 24.04.</li>
+</ul></li>
+</ol>
+<p><strong>Software Prerequisites</strong></p>
+<ol style="list-style-type: decimal">
+<li>Operating system: Linux is required — no Windows or macOS
+(Intel/M1/M2/M3). We recommend Ubuntu 24.04. While other distributions
+may work, we cannot guarantee support for them.</li>
+<li>Docker: version 25.04 or higher must be pre-installed.</li>
+</ol>
+<blockquote>
+<p>Note: Other necessary software will be installed.</p>
+</blockquote>
+<p><strong>Reading time</strong>: ~30mins</p>
+<p><strong>Tutorial replication time</strong>: ~90mins</p>
+</div>
+<div id="preparation-for-ran-training-session"
+class="slide section level1">
+<h1>Preparation for RAN training session</h1>
+<p>In this session we will:</p>
+<ul>
+<li>setup an environment, install dependencies and start
+compilation</li>
+<li>have a general overview of the RAN repository</li>
+</ul>
+<p>Please don’t hesitate to ask questions!</p>
+</div>
+<div class="slide section level1">
+
+<h2 id="the-ran-repository">The RAN repository</h2>
+<ul>
+<li><strong>Repository URL</strong>:
+<code>https://gitlab.eurecom.fr/oai/openairinterface5g</code></li>
+<li><strong>Main branch</strong>: Work happens in the
+<code>develop</code> branch</li>
+<li><strong>Latest release</strong>: <code>v2.4.0</code> (December
+2025), check <a
+href="https://gitlab.eurecom.fr/oai/openairinterface5g/-/releases/v2.4.0">Release
+Notes</a></li>
+<li><strong>Weekly tags</strong>: Usually one integration branch per
+week, tagged in the format <code>YYYY-wWW</code>, e.g.,
+<code>2026.w13</code></li>
+<li><strong>Developers</strong>: Use <code>develop</code></li>
+<li><strong>Main README</strong>: See <a
+href="https://gitlab.eurecom.fr/oai/openairinterface5g/-/blob/develop/README.md">README.md</a>
+in the repository root for general overview</li>
+<li><strong>Documentation</strong>: Comprehensive documentation is
+available in the <a
+href="https://gitlab.eurecom.fr/oai/openairinterface5g/-/tree/develop/doc"><code>doc/</code></a>
+directory:
+<ul>
+<li><a
+href="https://gitlab.eurecom.fr/oai/openairinterface5g/-/blob/develop/doc/BUILD.md">Building
+OAI</a> - Detailed build instructions</li>
+<li><a
+href="https://gitlab.eurecom.fr/oai/openairinterface5g/-/blob/develop/doc/RUNMODEM.md">Running
+the modems</a> - How to run gNB and UE</li>
+<li><a
+href="https://gitlab.eurecom.fr/oai/openairinterface5g/-/blob/develop/doc/system_requirements.md">System
+Requirements</a> - Hardware and software requirements</li>
+<li><a
+href="https://gitlab.eurecom.fr/oai/openairinterface5g/-/blob/develop/doc/FEATURE_SET.md">Feature
+Set</a> - Implemented 3GPP features</li>
+<li><a
+href="https://gitlab.eurecom.fr/oai/openairinterface5g/-/blob/develop/doc/MAC/mac-usage.md">MAC
+Usage</a> - MAC layer configuration and statistics</li>
+</ul></li>
+</ul>
+</div>
+<div class="slide section level1">
+
+<h2 id="repository-structure">Repository structure</h2>
+<p>The OpenAirInterface 5G repository is organized into several main
+directories:</p>
+<ul>
+<li><code>openair1/</code>: Layer 1 (3GPP LTE Rel-10/12 PHY, NR Rel-15+
+PHY)</li>
+<li><code>openair2/</code>: Layer 2 (3GPP LTE Rel-10
+MAC/RLC/PDCP/RRC/X2AP, NR Rel-15+ MAC/RLC/PDCP/SDAP/RRC/X2AP/F1AP/E1AP),
+E2AP!</li>
+<li><code>openair3/</code>: Layer 3 (3GPP LTE Rel-10 S1AP/GTP, NR
+Rel-15+ NGAP)
+<ul>
+<li>Core network interfaces (NGAP, S1AP) and GTP-U</li>
+</ul></li>
+<li><code>common/</code>: Common code, generic libraries (Tpool,
+logging, configuration modules, )</li>
+<li><code>executables/</code>: LTE and NR executables
+<ul>
+<li>Main entry points for gNB, eNB, UE applications</li>
+</ul></li>
+<li><code>radio/</code>: Radios and SDRs
+<ul>
+<li>Support for various SDR platforms (USRP, BladeRF, RFsimulator,
+FHI72, etc.)</li>
+</ul></li>
+<li><code>nfapi/</code>: (n)FAPI split</li>
+<li><code>cmake_targets/</code>: Everything related to compilation
+<ul>
+<li>Build scripts (<code>build_oai</code>), build artifacts in
+<code>ran_build/build</code></li>
+</ul></li>
+<li><code>doc/</code>: Documentation
+<ul>
+<li>Comprehensive documentation including tutorials, API docs, and
+design documents</li>
+</ul></li>
+<li><code>ci-scripts/</code>: Everything related to CI testing
+<ul>
+<li>Test scripts, CI configurations, example config files</li>
+</ul></li>
+<li><code>docker/</code>: Docker build files
+<ul>
+<li>Dockerfiles for building containerized OAI components</li>
+</ul></li>
+<li><code>charts/</code>: Helm charts for Kubernetes/OpenShift
+deployment</li>
+<li><code>openshift/</code>: OpenShift deployment configurations</li>
+<li><code>targets/</code>: Configuration files (<code>PROJECTS</code>)
+<ul>
+<li>Example configuration files for different deployment scenarios</li>
+</ul></li>
+</ul>
+</div>
+<div class="slide section level1">
+
+<h3 id="repository-some-examples">Repository: Some examples</h3>
+<p>Examples:</p>
+<ul>
+<li><strong>Where is NR PDSCH modulation?</strong> Called in
+<code>nr_generate_pdsch()</code></li>
+<li><strong>Where is the NR PDSCH/DLSCH scheduler?</strong> See
+<code>gNB_dlsch_ulsch_scheduler()</code></li>
+<li><strong>Where is the NR RRC Reconfiguration message sent?</strong>
+See <code>rrc_gNB_generate_dedicatedRRCReconfiguration()</code></li>
+<li><strong>Where is the PDSCH simulation?</strong> See
+<code>dlschsim.c</code></li>
+<li><strong>Where is the E2 agent?</strong> See next training
+session</li>
+</ul>
+<p>For more details on the software architecture, see <a
+href="https://gitlab.eurecom.fr/oai/openairinterface5g/-/blob/develop/doc/SW_archi.md"><code>doc/SW_archi.md</code></a>
+in the main repository.</p>
+</div>
+<div class="slide section level1">
+
+<h2 id="installation-of-dependencies-and-compilation">Installation of
+dependencies and compilation</h2>
+<p>We assume that the main repository is located at
+<code>~/openairinterface5g</code> and the workshop repository at
+<code>~/oai-workshops</code>.</p>
+<pre><code>cd ~
+git clone https://gitlab.eurecom.fr/oai/openairinterface5g.git
+cd openairinterface5g/cmake_targets
+./build_oai --ninja -I                       # install dependencies</code></pre>
+<p>Compile RAN executables for gNB and nrUE:</p>
+<pre><code>./build_oai --ninja --gNB --nrUE -w SIMU -c  # compile gNB and nrUE</code></pre>
+<ul>
+<li>“Historical” build tool</li>
+<li>Some useful options: <code>-h</code>, <code>--eNB</code>,
+<code>--gNB</code>, <code>--UE</code>, <code>--nrUE</code>,
+<code>-c</code>, <code>--ninja</code>, <code>--sanitize-address</code>,
+<code>-g</code>, <code>-w</code>, <code>-P/--physical_simulators</code>,
+…</li>
+<li>By default, build artifacts are in
+<code>cmake_targets/ran_build/build</code> (<code>ran_build/</code>
+configurable, see <code>-d</code> switch)</li>
+</ul>
+<blockquote>
+<p>Note: For USRP support, you need to use the switch
+<code>-w USRP</code>. For O-RAN, use <code>-t oran_fhlib_5g</code></p>
+</blockquote>
+</div>
+<div class="slide section level1">
+
+<h3 id="alternative-compilation-cmake-recommended">Alternative
+compilation: cmake (recommended)</h3>
+<p><code>build_oai</code> is a wrapper on top of <code>cmake</code>. It
+is possible to run <code>cmake</code> directly:</p>
+<pre><code>cd ~/openairinterface5g
+mkdir build &amp;&amp; cd build
+cmake ../ -GNinja
+ninja</code></pre>
+<p>You can check additional options available for compilation:</p>
+<pre><code>ccmake .</code></pre>
+</div>
+<div class="slide section level1">
+
+<h3 id="main-executables">Main executables</h3>
+<p>After build, you will find, in the build directory:</p>
+<ul>
+<li><code>nr-softmodem</code>: main NR gNB/CU/DU executable</li>
+<li><code>nr-uesoftmodem</code>: NR UE executable</li>
+<li><code>libdfts.so</code>: (i)FFT library</li>
+<li><code>libldpc.so</code>: LDPC library (multiple
+implementations)</li>
+<li><code>librfsimulator.so</code>/<code>liboai_usrpdevif.so</code>/…:
+radio libraries</li>
+<li><code>nr_*sim</code>: 5G unitary/physical simulators</li>
+<li><code>nr-cuup</code>: CU-UP</li>
+<li><code>lte-softmodem</code>/<code>lte-uesoftmodem</code>/other
+<code>*sim</code>: LTE executables</li>
+</ul>
+</div>
+<div id="hands-on" class="slide section level1">
+<h1>Hands-On</h1>
+<ul>
+<li>Set up a working system using simulated SDR</li>
+<li>Develop basic and advanced understanding of various aspects of OAI
+to facilitate special trainings later (vrtsim, E2 agent, USRPs,
+security).</li>
+</ul>
+<h2 id="about-the-rfsimulator">About the RFsimulator</h2>
+<ul>
+<li>Virtual SDR device: replaces physical radio hardware (e.g., USRP
+boards)</li>
+<li>Easy setup: test OAI without an RF board by forwarding time-domain
+I/Q samples</li>
+<li>Simple: eliminates unpredictable over-the-air perturbations</li>
+<li>Debugging: perfect for development/testing</li>
+<li>Non-realtime: ideal for checking signal processing algorithms and
+protocol implementations</li>
+<li>Channel modeling support: simulate simple channels such as AWGN and
+other channel models</li>
+</ul>
+<h2 id="other-radios">Other radios</h2>
+<ul>
+<li>virtual real-time radio: <code>vrtsim</code>, can be used for
+softwarized performance evaluation/test throughput</li>
+<li>hardware-based: USRPs, O-RUs/O-RAN 7.2 FHI</li>
+</ul>
+</div>
+<div class="slide section level1">
+
+<h3 id="use-cases">Use Cases</h3>
+<ul>
+<li>Development and debugging: Test signal processing and protocol
+implementations without hardware</li>
+<li>Workshops and training: Easy setup for multiple participants without
+interference</li>
+<li>Channel modeling: Test algorithms under controlled channel
+conditions</li>
+<li>Multi-UE testing: Support for connecting multiple UEs to a single
+gNB</li>
+<li>NTN simulation: Can simulate satellite propagation delays (e.g.,
+GEO: 238.74 ms one-way)</li>
+</ul>
+<h3 id="limitations">Limitations</h3>
+<ul>
+<li>Power control: <code>txgain</code>/<code>rxgain</code> settings are
+not supported</li>
+<li>CPU-bound: Performance depends on available CPU resources</li>
+</ul>
+<h3 id="documentation">Documentation</h3>
+<p>For detailed information about the RFsimulator, see:</p>
+<ul>
+<li><a
+href="https://gitlab.eurecom.fr/oai/openairinterface5g/-/blob/develop/radio/rfsimulator/README.md">RFsimulator
+README</a> - Complete RFsimulator documentation</li>
+<li><a
+href="https://gitlab.eurecom.fr/oai/openairinterface5g/-/blob/develop/openair1/SIMULATION/TOOLS/DOC/channel_simulation.md">Channel
+Simulation</a> - Channel modeling details</li>
+<li><a
+href="https://gitlab.eurecom.fr/oai/openairinterface5g/-/blob/develop/doc/RUNMODEM.md">Running
+the modems</a> - General usage information</li>
+</ul>
+</div>
+<div class="slide section level1">
+
+<h2 id="how-to-create-a-docker-image">How to create a docker image</h2>
+<ul>
+<li><p>Creating a Docker image is a 3-step process (due to CI
+specificities):</p>
+<ul>
+<li><code>ran-base</code> for dependencies (shared image)</li>
+<li><code>ran-build</code> for compiling all targets (shared image)</li>
+<li>Per-target (eNB, gNB, nrUE, lteUE, ) images</li>
+</ul></li>
+<li><p>First, build the shared images:</p>
+<pre><code>docker build --target ran-base --tag ran-base:latest --file docker/Dockerfile.base.ubuntu .
+docker build --target ran-build --tag ran-build:latest --file docker/Dockerfile.build.ubuntu .</code></pre></li>
+<li><p>Then, build the target images, e.g., gNB and nrUE (as used in the
+CN session):</p>
+<pre><code>docker build --target oai-gnb --tag oai-gnb:latest --file docker/Dockerfile.gNB.ubuntu .</code></pre></li>
+<li><p>See also <a
+href="https://gitlab.eurecom.fr/oai/openairinterface5g/-/blob/develop/docker/README.md"><code>docker/README.md</code></a>
+in the main repository for detailed Docker build instructions</p></li>
+</ul>
+</div>
+<div class="slide section level1">
+
+<h2 id="basic-end-to-end-setup">Basic end-to-end setup</h2>
+<h3 id="startup">Startup</h3>
+<p>Start the core network:</p>
+<pre><code>cd ~/oai-workshops/cn/
+docker compose -f docker-compose.yml up -d
+watch -n 1 docker compose -f docker-compose.yml ps -a</code></pre>
+<p>Once all containers are healthy, run Wireshark and capture NGAP
+traffic:</p>
+<pre><code>sudo wireshark -k -i any -Y &quot;ngap&quot;</code></pre>
+<p>Then, start the gNB:</p>
+<pre><code>cd ~/openairinterface5g/cmake_targets/ran_build/build
+./nr-softmodem -O ~/oai-workshops/ran/conf/gnb.sa.band78.106prb.rfsim.conf --rfsim --log_config.global_log_options utc_time</code></pre>
+<p>Check that you see the NGAP Setup Request and Response messages in
+Wireshark.</p>
+<p>Run the nrUE from a second terminal:</p>
+<pre><code>cd ~/openairinterface5g/cmake_targets/ran_build/build
+sudo ./nr-uesoftmodem -C 3619200000 -r 106 --numerology 1 --ssb 516 -O ~/oai-workshops/ran/conf/ue.conf --rfsim --log_config.global_log_options utc_time</code></pre>
+</div>
+<div class="slide section level1">
+
+<p>Verify that it is connected: you should see the following output at
+gNB:</p>
+<pre><code>[19:23:26.397078] [NR_RRC] [UL] (cellID bc614e, UE ID 1 RNTI c2d2) Received RRCReconfigurationComplete
+[19:23:26.397127] [NR_RRC] PDU Session Setup: ID=10, outgoing TEID=0x8bbb99de, Addr=192.168.70.129
+[19:23:26.397133] [NR_RRC] NGAP_PDUSESSION_SETUP_RESP: sending the message
+[19:23:26.397436] [NR_MAC] DU received confirmation of successful RRC Reconfiguration</code></pre>
+<p>and nrUE:</p>
+<pre><code>[19:23:26.377172] [NR_RRC] rrcReconfigurationComplete Encoded 10 bits (2 bytes)
+[19:23:26.377178] [NR_RRC]  Logical Channel UL-DCCH (SRB1), Generating RRCReconfigurationComplete (bytes 2)
+[19:23:26.377185] [NAS]    Received PDU Session Establishment Accept, UE IPv4: 10.0.0.2
+Unknown IEI 129
+[19:23:26.377806] [OIP]    Interface oaitun_ue1 successfully configured, IPv4 10.0.0.2, IPv6 (null)</code></pre>
+<p>Correspondingly, an interface should have been brought up:</p>
+<pre><code>24: oaitun_ue1: &lt;POINTOPOINT,NOARP,UP,LOWER_UP&gt; mtu 1500 qdisc fq_codel state UNKNOWN group default qlen 500
+    link/none
+    inet 10.0.0.3/24 scope global oaitun_ue1
+       valid_lft forever preferred_lft forever
+    inet6 fe80::d166:f94e:7413:3f79/64 scope link stable-privacy
+       valid_lft forever preferred_lft forever</code></pre>
+<p>Some other things to check:</p>
+<ul>
+<li>You see the RA procedure of the UE in the gNB logs</li>
+</ul>
+</div>
+<div class="slide section level1">
+
+<div class="float">
+<img src="resources/mono-pcap.png"
+alt="Screenshot of the Wireshark with monolithic gNB" />
+<div class="figcaption">Screenshot of the Wireshark with monolithic
+gNB</div>
+</div>
+</div>
+<div class="slide section level1">
+
+<h3 id="inject-traffic">Inject traffic</h3>
+<ul>
+<li><p>Check the UE’s IP address on interface <code>oaitun_ue1</code>
+using:</p>
+<pre><code>ip address show oaitun_ue1</code></pre></li>
+<li><p>The IP address <code>192.168.70.135</code> is the address of the
+<code>oai-ext-dn</code> container.</p></li>
+<li><p>Ping test:</p>
+<ul>
+<li><p>From the UE (“UL”) — ping from the UE (host) to the
+<code>oai-ext-dn</code> container:</p>
+<pre><code>ping -I oaitun_ue1 192.168.70.135</code></pre></li>
+<li><p>From the <code>oai-ext-dn</code> (“DL”) — ping from the
+<code>oai-ext-dn</code> container to the UE:</p>
+<pre><code>docker exec -it oai-ext-dn ping &lt;UE IP address&gt;  # from container, &quot;DL&quot;</code></pre></li>
+</ul></li>
+<li><p>Iperf3 test: Iperf3 can be used to test UL and DL throughput
+between the <code>oai-ext-dn</code> (in Docker) and the UE (running
+locally):</p>
+<ul>
+<li><p>start the iperf3 server inside the container:</p>
+<pre><code>docker exec -it oai-ext-dn bash -c &quot;iperf3 -s&quot;</code></pre></li>
+<li><p>On the host, in a new terminal, run the iperf3 client and bind
+the UE IP address:</p>
+<pre><code>iperf3 -B &lt;UE IP ADDRESS&gt; -c 192.168.70.135 -u -b 50M -R # DL
+iperf3 -B &lt;UE IP ADDRESS&gt; -c 192.168.70.135 -u -b 20M    # UL</code></pre></li>
+<li><p>if your iperf3 version is &gt; 3.10, you can use
+<code>--bind-dev</code> option instead of <code>-B</code></p>
+<pre><code>iperf3 --bind-dev oaitun_ue1 -c 192.168.70.135 -u -b 50M -R # DL
+iperf3 --bind-dev oaitun_ue1 -c 192.168.70.135 -u -b 20M    # UL</code></pre></li>
+</ul></li>
+</ul>
+</div>
+<div class="slide section level1">
+
+<h2 id="cu-du-f1-split">CU-DU F1 split</h2>
+<ul>
+<li>Start Wireshark with capture filter <code>sctp</code> and display
+filter <code>ngap or f1ap</code></li>
+</ul>
+<pre><code>sudo wireshark -k -i any -f &quot;sctp&quot; -Y &quot;ngap or f1ap&quot;</code></pre>
+<ul>
+<li><p>Start the gNB as follows:</p>
+<pre><code>./nr-softmodem -O ~/oai-workshops/ran/conf/gnb-cu.sa.f1.conf --log_config.global_log_options utc_time
+./nr-softmodem -O ~/oai-workshops/ran/conf/gnb-du.sa.band78.106prb.rfsim.conf --rfsim --log_config.global_log_options utc_time</code></pre></li>
+<li><p>Start the UE as before:</p>
+<pre><code>sudo ./nr-uesoftmodem -C 3319680000 -r 106 --numerology 1 --ssb 516 -O ~/oai-workshops/ran/conf/ue.conf --rfsim --log_config.global_log_options utc_time</code></pre></li>
+<li><p>Compare the IP addresses in the config with what you have below
+to understand the interfaces</p></li>
+</ul>
+<div class="float">
+<img src="resources/f1-arch.png" alt="Architecture of F1 and config" />
+<div class="figcaption">Architecture of F1 and config</div>
+</div>
+</div>
+<div class="slide section level1">
+
+<div class="float">
+<img src="resources/f1-pcap-updated.png"
+alt="Screenshot of the Wireshark with NG and F1" />
+<div class="figcaption">Screenshot of the Wireshark with NG and F1</div>
+</div>
+</div>
+<div class="slide section level1">
+
+<h2 id="cu-du-f1-e1-split">CU-DU F1 + E1 split</h2>
+<ul>
+<li>Start Wireshark with capture filter <code>sctp</code> and display
+filter <code>ngap or f1ap or e1ap</code></li>
+</ul>
+<pre><code>sudo wireshark -k -i any -f &quot;sctp&quot; -Y &quot;ngap or f1ap or e1ap&quot;</code></pre>
+<ul>
+<li><p>Start the gNB as follows</p>
+<pre><code>./nr-softmodem -O ~/oai-workshops/ran/conf/gnb-cucp.sa.f1.rfsim.conf --rfsim --log_config.global_log_options utc_time
+./nr-cuup -O ~/oai-workshops/ran/conf/gnb-cuup.sa.f1.rfsim.conf --log_config.global_log_options utc_time
+./nr-softmodem -O ~/oai-workshops/ran/conf/gnb-du.sa.band78.106prb.rfsim.conf --log_config.global_log_options utc_time</code></pre></li>
+<li><p>Start the UE as before:</p>
+<pre><code>sudo ./nr-uesoftmodem -C 3319680000 -r 106 --numerology 1 --band 78 --ssb 516 -O ~/oai-workshops/ran/conf/ue.conf --rfsim --log_config.global_log_options utc_time</code></pre></li>
+<li><p>Compare the IP addresses in the config with what you have below
+to understand the interfaces</p></li>
+</ul>
+<div class="float">
+<img src="resources/e1+f1-arch.png"
+alt="Architecture of F1+E1 and config" />
+<div class="figcaption">Architecture of F1+E1 and config</div>
+</div>
+</div>
+<div class="slide section level1">
+
+<div class="float">
+<img src="resources/e1+f1-pcap-updated.png"
+alt="Screenshot of the Wireshark with NG, F1 and E1" />
+<div class="figcaption">Screenshot of the Wireshark with NG, F1 and
+E1</div>
+</div>
+</div>
+<div class="slide section level1">
+
+<h2 id="nfapi-f1-e1-split">nFAPI + F1 + E1 split</h2>
+<ul>
+<li><p>Start Wireshark with capture filter <code>sctp</code> and display
+filter <code>ngap or f1ap or e1ap</code></p></li>
+<li><p>Start the gNB as follows:</p>
+<ul>
+<li>Start CU-CP</li>
+</ul>
+<pre><code>./nr-softmodem -O ~/oai-workshops/ran/conf/gnb-cucp.sa.f1.rfsim.conf --log_config.global_log_options utc_time</code></pre>
+<ul>
+<li>Start CU-UP</li>
+</ul>
+<pre><code>./nr-cuup -O ~/oai-workshops/ran/conf/gnb-cuup.sa.f1.rfsim.conf --log_config.global_log_options utc_time</code></pre>
+<ul>
+<li>Start DU-High</li>
+</ul>
+<pre><code>./nr-softmodem -O ~/oai-workshops/ran/conf/gnb-vnf.sa.band66.u0.25prb.nfapi.conf --nfapi VNF --log_config.global_log_options utc_time</code></pre>
+<ul>
+<li>Start DU-Low</li>
+</ul>
+<pre><code>./nr-softmodem -O ~/oai-workshops/ran/conf/gnb-pnf.band66.rfsim.conf --nfapi PNF --rfsim --log_config.global_log_options utc_time</code></pre></li>
+<li><p>Start UE</p>
+<pre><code>sudo ./nr-uesoftmodem -C 2152680000 --CO -400000000 -r 25 --numerology 0 --band 66 --ssb 48 -O ~/oai-workshops/ran/conf/ue.conf --rfsim --log_config.global_log_options utc_time</code></pre></li>
+</ul>
+<div class="float">
+<img src="resources/e1+f1+nfapi-arch.png"
+alt="Architecture of gNB and config" />
+<div class="figcaption">Architecture of gNB and config</div>
+</div>
+</div>
+<div class="slide section level1">
+
+<h3 id="a-closer-look-at-the-gnb-periodic-output">A closer look at the
+gNB periodic output</h3>
+<p>The scheduler periodically outputs statistics that can help assess
+the radio channel quality and explain why a UE may not perform as
+expected.</p>
+<p>Example:</p>
+<pre><code>[NR_MAC]  Frame.Slot 128.0
+UE RNTI cb4d CU-UE-ID 1 in-sync PH 48 dB PCMAX 20 dBm, average RSRP -44 (16 meas)
+UE cb4d: dlsch_rounds 92/0/0/0, dlsch_errors 0, pucch0_DTX 0, BLER 0.00003 MCS (0) 0 CCE fail 3
+UE cb4d: ulsch_rounds 750/0/0/0, ulsch_errors 0, ulsch_DTX 0, BLER 0.00000 MCS (0) 0 (Qm 2 deltaMCS 0 dB) NPRB 5  SNR 51.0 dB CCE fail 0
+UE cb4d: MAC:    TX           2308 RX          19918 bytes
+UE cb4d: LCID 1: TX            528 RX            281 bytes
+UE cb4d: LCID 2: TX              0 RX              0 bytes
+UE cb4d: LCID 4: TX             30 RX           1557 bytes</code></pre>
+<p>In the first line,</p>
+<ul>
+<li><code>UE RNTI</code>: this is also used as the DU UE ID over F1;
+each line is prepended with the RNTI</li>
+<li><code>CU UE ID</code>: separate identifier from the RNTI to handle
+multiple UEs across DUs (in which case RNTI conflicts are possible)</li>
+<li><code>PH</code>: Power Headroom, the amount of power the UE has
+left. If it is &gt; 40 you can achieve full UL throughput.
+<code>PCMAX</code> (<code>24 dBm</code>) is what the UE reported as
+maximum UL transmit power it can output in the channel.</li>
+<li><code>RSRP</code>: measured power of the DL reference signals at the
+UE. &gt;-80dBm you should have full DL throughput. &lt;-95 dBm, you are
+very limited in terms of connectivity.</li>
+<li><code>SINR</code>: measured signal to interference and noise ratio
+of the SSB received at the UE. Maximum value that can be reported by the
+UE is 40.0 dB.</li>
+</ul>
+<p>The fourth and fifth lines show HARQ-related information.</p>
+<p>In the last lines,</p>
+<ul>
+<li><code>MAC</code> shows the amount of MAC PDU bytes scheduled in
+transmit (<code>TX</code>, <code>1530943191</code>) and receive
+(<code>RX</code>, <code>194148</code>) directions</li>
+<li><code>LCID X</code> shows the amount of MAC SDU/RLC PDU data for
+Logical Channel ID with ID <code>X</code> in transmit and receive
+directions. LCIDs 1 and 2 are mapped to SRBs 1 and 2. LCIDs 4 and onward
+are mapped to DRBs 1 onward. If you have an LCID 4, it means you have a
+PDU session.</li>
+</ul>
+<p>For other parameters, see <a
+href="https://gitlab.eurecom.fr/oai/openairinterface5g/-/blob/develop/doc/MAC/mac-usage.md"><code>doc/MAC/mac-usage.md</code></a>
+in the main repository.</p>
+</div>
+<div class="slide section level1">
+
+<h3 id="a-closer-look-at-the-config-file">A closer look at the config
+file</h3>
+<h4 id="gnbs-section"><code>gNBs</code> section</h4>
+<ul>
+<li><code>plmn_list</code>: list of PLMNs, with MCC, MNC, and NSSAIs;
+needs to match the CN config</li>
+<li><code>tracking_area_code</code>: Tracking Area Code; needs to match
+the CN config</li>
+<li><code>amf_ip_address.[0].ipv4</code>: IP address of AMF</li>
+<li><code>NETWORK_INTERFACES.GNB_IPV4_ADDRESS_FOR_NG_AMF</code> and
+<code>NETWORK_INTERFACES.GNB_IPV4_ADDRESS_FOR_NGU</code>: IP address on
+which the gNB is running</li>
+<li><code>min_rxtxtime</code>: minimum feedback time (e.g., PDSCH to
+PUCCH), is 5 for OAI UE and 2 for commercial UE</li>
+<li><code>absoluteFrequencySSB</code> and
+<code>dl_absoluteFrequencyPointA</code>: frequencies for synchronization
+signal block and “PointA”, in ARFCN; <a
+href="http://sqimway.com/nr_refA.php">use a calculator instead of
+getting mad</a></li>
+<li>TDD configuration is in <code>nrofDownlinkSlots</code>,
+<code>nrofUplinkSlots</code>, <code>nrofDownlinkSymbols</code> and
+<code>nrofUplinkSymbols</code></li>
+</ul>
+<blockquote>
+<p>Notes: - If an option is not given, a default is used (which might or
+might not prevent the gNB from starting) - You can override many options
+on the command line. Example:
+<code>./nr-softmodem -O gnb.conf --MACRLCs.[0].dl_max_mcs 20</code></p>
+</blockquote>
+</div>
+<div class="slide section level1">
+
+<h4 id="macrlcs-section"><code>MACRLCs</code> section</h4>
+<ul>
+<li><code>ulsch_max_frame_inactivity</code>: maximum number of frames
+until UE is scheduled automatically even without requesting it. Often
+set to <code>0</code> or <code>1</code> for lower latency, but this is
+“artificial”</li>
+<li><code>pusch_TargetSNRx10</code>, <code>pucch_TargetSNRx10</code>:
+target SNRs multiplied by ten for these channels; increasing can
+sometimes stabilize a system</li>
+<li><code>dl_harq_round_max</code>, <code>ul_harq_round_max</code>:
+maximum number of MAC HARQ rounds</li>
+<li><code>dl_max_mcs</code>, <code>ul_max_mcs</code>: maximum MCS to be
+scheduled</li>
+</ul>
+<p>Other parameters: see <a
+href="https://gitlab.eurecom.fr/oai/openairinterface5g/-/blob/develop/openair2/GNB_APP/MACRLC_nr_paramdef.h"><code>openair2/GNB_APP/MACRLC_nr_paramdef.h</code></a>
+in the main repository</p>
+</div>
+<div class="slide section level1">
+
+<h4 id="rus-section"><code>RUs</code> section</h4>
+<ul>
+<li><code>nb_tx</code>, <code>nb_rx</code>: number of transmit/receive
+antennas to use</li>
+<li><code>max_rxgain</code>: maximum receive gain to be used (IIRC only
+used for USRP)</li>
+<li><code>att_tx</code>, <code>att_rx</code>: attenuation for
+transmit/receive signals to be applied at the gNB. In many lab
+scenarios, the receiver of a UE is saturated if the gNB sends with full
+power; hence you need a value greater than <code>0</code> (try, in
+order: <code>6</code>, <code>12</code>, <code>18</code>)</li>
+<li><code>sdr_addrs</code>: arguments to be passed to search for SDR,
+e.g., IP address for N310</li>
+</ul>
+</div>
+<div class="slide section level1">
+
+<h4 id="fhi_72-section"><code>fhi_72</code> section</h4>
+<ul>
+<li><code>dpdk_devices</code>: PCI addresses of virtual function (VF)
+NICs</li>
+<li><code>system_core</code>/<code>io_core</code>/<code>worker_cores</code>:
+cores for DPDK/xran workloads</li>
+<li><code>ru_addr</code>: array of RU addresses, on per VF</li>
+<li><code>fh_config</code>: array of RU configuration
+<ul>
+<li><code>ru_config</code>:
+<ul>
+<li><code>iq_width</code>: IQ bitwidth. 16=uncompressed,
+&lt;16=compressed mode.</li>
+<li><code>iq_width_prach</code>: same for PRACH</li>
+</ul></li>
+</ul></li>
+</ul>
+</div>
+<div class="slide section level1">
+
+<h2 id="f1-handover-intra-gnb">F1 Handover (intra-gNB)</h2>
+<ul>
+<li>Start Wireshark with capture filter <code>sctp</code> and display
+filter <code>ngap or f1ap</code></li>
+</ul>
+<pre><code>sudo wireshark -k -i any -Y &quot;ngap or f1ap&quot;</code></pre>
+<p>Exercise: Compare configuration files for DUs:
+<code>gnb-du.sa.band78.106prb.rfsim.pci0.conf</code> and
+<code>gnb-du.sa.band78.106prb.rfsim.pci1.conf</code>? Check DU ID, Cell
+ID, Physical Cell ID</p>
+<ul>
+<li>Start CU:</li>
+</ul>
+<pre><code>./nr-softmodem -O ~/oai-workshops/ran/conf/gnb-cu.sa.f1.conf --telnetsrv --telnetsrv.shrmod ci</code></pre>
+<ul>
+<li>Start DU0:</li>
+</ul>
+<pre><code>sudo ./nr-softmodem --rfsim -O ~/oai-workshops/ran/conf/gnb-du.sa.band78.106prb.rfsim.pci0.conf --rfsimulator.serveraddr ::1</code></pre>
+<blockquote>
+<p>Note: You might see following error after the DU1 start,</p>
+<pre><code>[HW    ]  Trying to connect to ::1:4043
+[HW    ]  connect() to ::1:4043 failed, errno(111)</code></pre>
+<p>This message will disappear once connected to RF simulator server -
+see next step.</p>
+</blockquote>
+<ul>
+<li>Start the UE (acts as a server)</li>
+</ul>
+<pre><code>sudo ./nr-uesoftmodem -C 3619200000 -r 106 --numerology 1 --ssb 516 --rfsim -O ~/oai-workshops/ran/conf/ue.conf --log_config.global_log_options function --rfsimulator.serveraddr server</code></pre>
+<ul>
+<li>Start DU1:</li>
+</ul>
+<pre><code>sudo ./nr-softmodem --rfsim -O ~/oai-workshops/ran/conf/gnb-du.sa.band78.106prb.rfsim.pci1.conf --rfsimulator.serveraddr ::1</code></pre>
+<ul>
+<li>Trigger F1 handover</li>
+</ul>
+<pre><code>echo ci trigger_f1_ho | nc 127.0.0.1 9090 &amp;&amp; echo</code></pre>
+<div class="float">
+<img src="resources/ho-arch.png"
+alt="F1 handover setup architecture and config" />
+<div class="figcaption">F1 handover setup architecture and config</div>
+</div>
+</div>
+<div class="slide section level1">
+
+<div class="float">
+<img src="resources/ho-pcap.png"
+alt="Screenshot of the Wireshark capture of HO deployment" />
+<div class="figcaption">Screenshot of the Wireshark capture of HO
+deployment</div>
+</div>
+</div>
+<div class="slide section level1">
+
+<h2 id="multiple-ues">Multiple UEs</h2>
+<ul>
+<li><p>All UEs try to open the same interface, which does not
+work</p></li>
+<li><p>Create network namespace for each UE to prevent interface name
+clash</p></li>
+<li><p>Follow instructions from <a
+href="https://open-cells.com/index.php/2021/02/08/rf-simulator-1-enb-2-ues-all-in-one/">this
+link</a> or use the script <a
+href="./multi-ue.sh">multi-ue.sh</a></p></li>
+<li><p>Start first UE as</p>
+<pre><code>sudo ~/oai-workshops/ran/multi-ue.sh -c1 -e
+./nr-uesoftmodem -r 106 --numerology 1 --band 78 -C 3619200000 -O /home/oai/oai-workshops/ran/conf/ue.conf --rfsim --rfsimulator.serveraddr 10.201.1.100 --log_config.global_log_options utc_time</code></pre></li>
+<li><p>Check in Wireshark/UE output that everything is ok</p></li>
+<li><p>Second UE <em>with a different IMSI</em>:</p>
+<pre><code>sudo ~/oai-workshops/ran/multi-ue.sh -c2 -e
+./nr-uesoftmodem -r 106 --numerology 1 --band 78 -C 3619200000 -O /home/oai/oai-workshops/ran/conf/ue.conf --rfsim --uicc0.imsi 001010000000102 --rfsimulator.serveraddr 10.202.1.100 --log_config.global_log_options utc_time</code></pre></li>
+</ul>
+<h3 id="exercise">Exercise</h3>
+<ul>
+<li><p>Check in Wireshark that both are set up</p></li>
+<li><p>Create traffic from/to both UEs</p></li>
+<li><p>Hints:</p>
+<pre><code>sudo ip netns exec ue1 bash
+sudo ip netns exec ue2 bash</code></pre>
+<h3 id="cleanup">Cleanup</h3></li>
+<li><p>At the end, remove network namespaces:</p>
+<pre><code>sudo ~/oai-workshops/ran/multi-ue.sh -d1 -d2</code></pre></li>
+</ul>
+</div>
+<div class="slide section level1">
+
+<h2 id="scopes">Scopes</h2>
+<p>The scopes allow you to see various channels.</p>
+<h3 id="imscope">ImScope</h3>
+<ul>
+<li><p>Install dependencies:</p>
+<pre><code>sudo apt-get install libglfw3-dev libopengl-dev</code></pre></li>
+<li><p>Build scope</p>
+<pre><code>cd ~/openairinterface5g/cmake_targets/
+./build_oai --build-lib imscope --ninja
+cd ran_build/build/
+cmake -DENABLE_IMSCOPE=ON ../../.. &amp;&amp; ninja imscope # alternative</code></pre></li>
+<li><p>Run the <code>nr-softmodem</code> and <code>nr-uesoftmodem</code>
+with <code>--imscope</code> switch</p></li>
+</ul>
+<p>Example commands:</p>
+<ul>
+<li><p>Run gNB:</p>
+<pre><code>./nr-softmodem -O ~/oai-workshops/ran/conf/gnb.sa.band78.106prb.rfsim.conf --rfsim --imscope --log_config.global_log_options utc_time</code></pre></li>
+<li><p>Run UE:</p>
+<pre><code>sudo ./nr-uesoftmodem -C 3619200000 -r 106 --numerology 1 --ssb 516 -O ~/oai-workshops/ran/conf/ue.conf --rfsim --imscope --log_config.global_log_options utc_time</code></pre></li>
+<li><p>For more information about scopes and troubleshooting, refer to:
+<a
+href="https://gitlab.eurecom.fr/oai/openairinterface5g/-/blob/develop/openair1/PHY/TOOLS/readme.md">ImScope
+documentation</a></p></li>
+</ul>
+</div>
+<div class="slide section level1">
+
+<div class="float">
+<img src="resources/imscope-screenshot.png"
+alt="Screenshot of the imscope" />
+<div class="figcaption">Screenshot of the imscope</div>
+</div>
+</div>
+<div class="slide section level1">
+
+<h3 id="xforms">Xforms</h3>
+<ul>
+<li><p>Install dependencies:</p>
+<pre><code>sudo apt-get install libforms-bin libforms-dev</code></pre></li>
+<li><p>Build scope:</p>
+<pre><code>cd ~/openairinterface5g/cmake_targets/
+./build_oai --build-lib nrscope --ninja
+cd ran_build/build/
+cmake -DENABLE_NRSCOPE=ON ../../.. &amp;&amp; ninja nrscope # alternative</code></pre></li>
+<li><p>Run <code>nr-softmodem</code> and <code>nr-uesoftmodem</code>
+with <code>-d</code> switch</p></li>
+<li><p>The error:</p>
+<pre><code>In fl_initialize() [flresource.c:995]: 5G-gNB-scope: Cant open display :0
+In fl_bgn_form() [forms.c:347]: Missing or failed call of fl_initialize()</code></pre>
+<p>can be solved by granting root the right to open the X display:</p>
+<pre><code>xhost +si:localuser:root</code></pre>
+<p>Example commands:</p></li>
+<li><p>Run gNB:</p>
+<pre><code>./nr-softmodem -O ~/oai-workshops/ran/conf/gnb.sa.band78.106prb.rfsim.conf --rfsim -d --log_config.global_log_options utc_time</code></pre></li>
+<li><p>Run UE:</p>
+<pre><code>sudo ./nr-uesoftmodem -C 3619200000 -r 106 --numerology 1 --ssb 516 -O ~/oai-workshops/ran/conf/ue.conf --rfsim -d --log_config.global_log_options utc_time</code></pre></li>
+</ul>
+</div>
+<div class="slide section level1">
+
+<div class="float">
+<img src="resources/xform-scope-screenshot.png"
+alt="Screenshot of the nrscope" />
+<div class="figcaption">Screenshot of the nrscope</div>
+</div>
+</div>
+<div class="slide section level1">
+
+<h2 id="channel-models">Channel Models</h2>
+<h3 id="enabling-channels">Enabling channels</h3>
+<ul>
+<li><p>We will simply add Gaussian noise</p></li>
+<li><p>Uncomment the last line in both the gNB and UE config files:</p>
+<pre><code>@include &quot;channelmod_rfsimu.conf&quot;</code></pre></li>
+<li><p>Add the options
+<code>--rfsimulator.options chanmod --rfsimulator.modelname AWGN</code>
+to the gNB and UE command lines and start them</p></li>
+<li><p>More info: See <a
+href="https://gitlab.eurecom.fr/oai/openairinterface5g/-/blob/develop/openair1/SIMULATION/TOOLS/DOC/channel_simulation.md"><code>openair1/SIMULATION/TOOLS/DOC/channel_simulation.md</code></a>
+in the main repository, channel models defined in <a
+href="https://gitlab.eurecom.fr/oai/openairinterface5g/-/blob/develop/openair1/SIMULATION/TOOLS/random_channel.c"><code>openair1/SIMULATION/TOOLS/random_channel.c</code></a></p></li>
+<li><p>Run gNB:</p>
+<pre><code>./nr-softmodem -O ~/oai-workshops/ran/conf/gnb.sa.band78.106prb.rfsim.conf --rfsim --imscope --rfsimulator.options chanmod --rfsimulator.modelname AWGN --log_config.global_log_options utc_time</code></pre></li>
+<li><p>Run UE:</p>
+<pre><code>sudo ./nr-uesoftmodem -C 3619200000 -r 106 --numerology 1 --ssb 516 -O ~/oai-workshops/ran/conf/ue.conf --rfsim --rfsimulator.options chanmod --rfsimulator.modelname AWGN --log_config.global_log_options utc_time</code></pre></li>
+</ul>
+</div>
+<div class="slide section level1">
+
+<h3
+id="dynamically-modifying-channel-model-parameters-using-telnet">Dynamically
+modifying Channel Model Parameters using Telnet</h3>
+<ul>
+<li><p>Make sure the telnet shared library is compiled:</p>
+<pre><code>cd ~/openairinterface5g/cmake_targets/
+./build_oai --build-lib telnetsrv --ninja
+cd ran_build/build/
+cmake ../../.. -DENABLE_TELNETSRV=ON &amp;&amp; ninja telnetsrv</code></pre></li>
+<li><p>Start the <code>nr-softmodem</code>/<code>nr-uesoftmodem</code>
+with parameter <code>--telnetsrv</code></p></li>
+</ul>
+<blockquote>
+<p>Note: Configure the UE telnet port to be different from the gNB:
+<code>--telnetsrv.listenport 9091</code></p>
+</blockquote>
+<ul>
+<li>In a new terminal: connect to gNB/UE:
+<code>telnet 127.0.0.1 9090</code>
+<ul>
+<li>Use <code>help</code> to show available commands</li>
+<li>Use <code>channelmod show current</code> to show current channel
+model configuration</li>
+<li>Use <code>channelmod help</code> to show available parameters to
+change</li>
+<li>Example: change noise using
+<code>channelmod modify 1 noise_power_dB -5</code></li>
+</ul></li>
+<li>More information: See <a
+href="https://gitlab.eurecom.fr/oai/openairinterface5g/-/blob/develop/openair1/SIMULATION/TOOLS/DOC/channel_simulation.md"><code>openair1/SIMULATION/TOOLS/DOC/channel_simulation.md</code></a>
+in the main repository</li>
+</ul>
+<p>Example commands:</p>
+<ul>
+<li><p>gNB</p>
+<pre><code>./nr-softmodem -O ~/oai-workshops/ran/conf/gnb.sa.band78.106prb.rfsim.conf --rfsim --imscope --rfsimulator.options chanmod --rfsimulator.modelname AWGN --telnetsrv --log_config.global_log_options utc_time</code></pre></li>
+<li><p>UE</p>
+<pre><code>sudo ./nr-uesoftmodem -C 3619200000 -r 106 --numerology 1 --ssb 516 -O ~/oai-workshops/ran/conf/ue.conf --rfsim --imscope --rfsimulator.options chanmod --rfsimulator.modelname AWGN --telnetsrv --telnetsrv.listenport 9091 --log_config.global_log_options utc_time</code></pre></li>
+<li><p>Connect to the local telnet interface to view or modify channel
+parameters:</p>
+<pre><code>telnet 127.0.0.1 9090</code></pre>
+<p>Once connected, you can display the current channel configuration and
+adjust parameters as needed:</p>
+<pre><code>channelmod show current
+channelmod modify 1 noise_power_dB -5</code></pre>
+<p>Observe the change of noise_power_dB in the scope to verify the
+effect of the modification.</p></li>
+</ul>
+</div>
+<div class="slide section level1">
+
+<h2 id="ntn-setup-exercise">NTN setup (Exercise)</h2>
+<p>Exercise: simulate non-terrestrial communication for a geostationary
+satellite (only signal delay, no other impairments) using the knowledge
+you acquired in this workshop.</p>
+<ul>
+<li><p>Run the gNB:</p>
+<pre><code>./nr-softmodem --rfsim -O ../../../ci-scripts/conf_files/gnb.sa.band254.u0.25prb.rfsim.ntn.conf</code></pre>
+<p>Note: you have to potentially adapt PLMN, and AMF and gNB IP
+addresses, to make this connect reliably. The rest is set in the config
+(no additional command line parameters required.</p></li>
+<li><p>Run the UE:</p>
+<pre><code>sudo ./nr-uesoftmodem --rfsim --band 254 -C 2488400000 --CO -873500000 -r 25 --numerology 0 --ssb 60 --rfsimulator.prop_delay 238.74 --num-ul-actors 1 --num-dl-actors 1 -O ../../../ci-scripts/conf_files/nrue.uicc.conf</code></pre>
+<p>Also here, you might need to change the IMSI and other
+authentication-related parameters.</p></li>
+<li><p>If you run this, notice that it runs much faster than what you
+would expect. Explain this.</p></li>
+<li><p>You might be interested to run this with normal (real-time)
+speed. Apply and compile the below patch, which will slow down RFsim.
+What do you observe now?</p></li>
+</ul>
+<pre><code>  diff --git a/radio/rfsimulator/simulator.c b/radio/rfsimulator/simulator.c
+index 94234a755f..6cd7a69c93 100644
+--- a/radio/rfsimulator/simulator.c
++++ b/radio/rfsimulator/simulator.c
+@@ -1067,6 +1067,22 @@ static int rfsimulator_read(openair0_device *device, openair0_timestamp *ptimest
+     LOG_D(HW, &quot;Rfsimulator: velocity %.2f Msps, realtime requirements %.2f Msps\n&quot;, average / 1e6, t-&gt;sample_rate / 1e6);
+   }
+
++  static struct timespec now;
++  if (now.tv_nsec == 0) {
++    // first time here: initialize to current time
++    int r = clock_gettime(CLOCK_MONOTONIC, &amp;now);
++    DevAssert(r == 0);
++  } else {
++    // advance by half a millisecond
++    now.tv_nsec += 1000000;
++    if (now.tv_nsec &gt; 999999999) {
++      now.tv_nsec -= 1000000000;
++      now.tv_sec++;
++    }
++  }
++  int r = clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &amp;now, NULL);
++  DevAssert(r == 0);
++
+   *ptimestamp = t-&gt;nextRxTstamp; // return the time of the first sample
+   t-&gt;nextRxTstamp += nsamps;
+   LOG_D(HW,</code></pre>
+</div>
+<div class="slide section level1">
+
+</div>
+</body>
+</html>
