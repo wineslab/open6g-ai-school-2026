@@ -1,1 +1,4 @@
-# open6g-ai-school-2026
+# Open6G+AI School 2026
+
+We will upload slides here!
+
